@@ -4,8 +4,10 @@ import re
 import paho.mqtt.publish as publish
 import paho.mqtt.client as mqtt
 
-WORDS = ["BEDROOM", "STUDY", "KITCHEN", "LOUNGE", "LIBRARY", "HALL",
-         "BALLROOM", "MUSIC"]
+LOCATIONS = ["BEDROOM", "STUDY", "KITCHEN", "LOUNGE", "LIBRARY", "HALL",
+             "BALLROOM"]
+
+WORDS = LOCATIONS + ["MUSIC"]
 
 PRIORITY = 1
 
@@ -13,7 +15,6 @@ MQTTHOST = "pixie"
 TOPIC_ROOT = "ha/"
 DEFAULT_LOC = "bedroom-mark"
 
-MEDIA_ACTION = ["PLAY", "PAUSE", "STOP", "NEXT", "PREVIOUS"]
 
 def handle(text, mic, profile):
     """
@@ -39,7 +40,7 @@ def handle(text, mic, profile):
 
     location = DEFAULT_LOC
 
-    for l in WORDS:
+    for l in LOCATIONS:
         if l in text:
             location = l.lower()
 
