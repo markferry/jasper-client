@@ -131,8 +131,8 @@ def handle(text, mic, profile):
     location = DEFAULT_LOC
 
     for l in LOCATIONS:
-        if l in text:
-            location = l.lower()
+        if l in lower_text:
+            location = l
 
     if location == "bedroom":
         location = "bedroom-mark"
