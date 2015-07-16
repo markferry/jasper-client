@@ -123,54 +123,59 @@ def handle(text, mic, profile):
         mic.say("The room status is " + str(msg.payload))
         client.disconnect()
 
+    def handle_command(command):
+        location = DEFAULT_LOC
+
+        for l in LOCATIONS:
+            if l in command:
+                location = l
+
+        if location == "bedroom":
+            location = "bedroom-mark"
+
+        item = None
+        topic = None
+        states = None
+        new_state = "ON"
+
+        # Attempt to match items first
+        #  e.g. "music volume 50"
+        item_match = re.search(ITEMS_REGEX, command, re.IGNORECASE)
+
+        if item_match:
+            item = ITEM_MAP[item_match.group(0)]
+            topic = item['topic']
+            states = item['states']
+
+        # If we need further info try to extract an action
+        #  e.g. "volume 50", "media OFF"
+        if not item or item['need-action']:
+            action_match = re.search(ACTIONS_REGEX, command, re.IGNORECASE)
+            if action_match:
+                action = ACTION_MAP[action_match.group(0)]
+                # override the item topic and states
+                topic = action['topic']
+                states = action['states']
+
+        if states:
+            state_match = re.search(states, command, re.IGNORECASE)
+            if state_match:
+                new_state = state_match.group(0)
+
+        if topic and new_state:
+            logger.debug("mqtt: publishing to " + location + topic)
+            publish.single(TOPIC_ROOT + location + topic, new_state.upper(),
+                           hostname=MQTTHOST, client_id=DEFAULT_LOC)
+            mic.say(location + topic.replace('/', ' ') + " " + new_state)
+
     logger = logging.getLogger(__name__)
     logger.debug("mqtt: got text=" + text)
 
-    lower_text = text.lower()
+    # basic command concatenation
+    commands = text.lower().split(' and ')
 
-    location = DEFAULT_LOC
-
-    for l in LOCATIONS:
-        if l in lower_text:
-            location = l
-
-    if location == "bedroom":
-        location = "bedroom-mark"
-
-    item = None
-    topic = None
-    states = None
-    new_state = "ON"
-
-    # Attempt to match items first
-    #  e.g. "music volume 50"
-    item_match = re.search(ITEMS_REGEX, lower_text, re.IGNORECASE)
-
-    if item_match:
-        item = ITEM_MAP[item_match.group(0)]
-        topic = item['topic']
-        states = item['states']
-
-    # If we need further info try to extract an action
-    #  e.g. "volume 50", "media OFF"
-    if not item or item['need-action']:
-        action_match = re.search(ACTIONS_REGEX, lower_text, re.IGNORECASE)
-        if action_match:
-            action = ACTION_MAP[action_match.group(0)]
-            # override the item topic and states
-            topic = action['topic']
-            states = action['states']
-
-    if states:
-        state_match = re.search(states, lower_text, re.IGNORECASE)
-        if state_match:
-            new_state = state_match.group(0)
-
-    if topic and new_state:
-        logger.debug("mqtt: publishing to " + location + topic)
-        publish.single(TOPIC_ROOT + location + topic, new_state.upper(),
-                       hostname=MQTTHOST, client_id=DEFAULT_LOC)
-        mic.say(location + topic.replace('/', ' ') + " " + new_state)
+    for command in commands:
+        handle_command(command)
 
 
 def isValid(text):
