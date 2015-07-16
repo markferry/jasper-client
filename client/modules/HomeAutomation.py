@@ -24,6 +24,12 @@ ITEM_MAP = {
         'need-action': False,
         'states': INTEGER_STATES,
     },
+    'amplifier': {
+        'name': 'amplifier',
+        'topic': "/amp",
+        'need-action': False,
+        'states': BINARY_STATES,
+    },
     'temperature': {  # "set"
         'name': 'temperature',
         'topic': "/setpoint",
