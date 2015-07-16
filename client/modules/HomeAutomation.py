@@ -5,7 +5,7 @@ import paho.mqtt.publish as publish
 import paho.mqtt.client as mqtt
 
 WORDS = ["BEDROOM", "STUDY", "KITCHEN", "LOUNGE", "LIBRARY", "HALL",
-         "BALLROOM"]
+         "BALLROOM", "MUSIC"]
 
 PRIORITY = 1
 
@@ -51,7 +51,7 @@ def handle(text, mic, profile):
             logger.debug("mqtt: publishing to media/playpause")
             publish.single(TOPIC_ROOT + location + "/media/playpause", "ON",
                            hostname=MQTTHOST, client_id=DEFAULT_LOC)
-            mic.say(location + " media pause")
+            mic.say(location + " media play pause")
 
         if "STOP" in text:
             logger.debug("mqtt: publishing to media/stop")
