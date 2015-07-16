@@ -2,18 +2,106 @@
 import logging
 import re
 import paho.mqtt.publish as publish
-import paho.mqtt.client as mqtt
 
-LOCATIONS = ["BEDROOM", "STUDY", "KITCHEN", "LOUNGE", "LIBRARY", "HALL",
-             "BALLROOM"]
+LOCATIONS = ["bedroom-mark", "bedroom", "study", "kitchen", "lounge",
+             "library", "hall", "ballroom"]
 
-WORDS = LOCATIONS + ["MUSIC"]
+# regex matches
+DEFAULT_STATES = r''
+BINARY_STATES = r'\b(on|off)\b'
+INTEGER_STATES = r'\b([0-9]+)\b'
+
+ITEM_MAP = {
+    'lights': {
+        'name': 'lights',
+        'topic': "/lights",
+        'need-action': False,
+        'states': BINARY_STATES,
+    },
+    'dimmers': {
+        'name': 'dimmers',
+        'topic': "/dimmers",
+        'need-action': False,
+        'states': INTEGER_STATES,
+    },
+    'temperature': {  # "set"
+        'name': 'temperature',
+        'topic': "/setpoint",
+        'need-action': False,
+        'states': INTEGER_STATES,
+    },
+    'thermostat': {  # "set"
+        'name': 'thermostat',
+        'topic': "/setpoint",
+        'need-action': False,
+        'states': INTEGER_STATES,
+    },
+    'media': {
+        'name': 'media',
+        'topic': None,  # absolutely require an action
+        'need-action': True,
+        'states': None,
+    },
+    'music': {
+        'name': 'media',
+        'topic': None,
+        'need-action': True,
+        'states': None,
+    },
+    'volume': {  # also an action
+        'name': 'volume',
+        'topic': "/media/volume",
+        'need-action': False,
+        'states': BINARY_STATES + '|' + INTEGER_STATES,
+    },
+    'scene': {
+        'name': 'scene',
+        'topic': "/scene",
+        'need-action': False,
+        'states': INTEGER_STATES,
+    },
+    'mood': {
+        'name': 'mood',
+        'topic': "/scene",
+        'need-action': False,
+        'states': INTEGER_STATES,
+    },
+}
+
+ITEMS_REGEX = r'\b(?:%s)\b' % '|'.join(ITEM_MAP.keys())
+
+
+ACTION_MAP = {
+    'play': {
+        'topic': "/media/playpause",
+        'states': None
+    },
+    'pause': {
+        'topic': "/media/playpause",
+        'states': None
+    },
+    'stop': {
+        'topic': "/media/stop",
+        'states': None
+    },
+    'volume': {  # also an item
+        'topic': "/media/volume",
+        'states': BINARY_STATES + '|' + INTEGER_STATES,
+    },
+    'off': {
+        'topic': "/media/stop",
+        'states': DEFAULT_STATES,
+    },
+}
+ACTIONS_REGEX = r'\b(?:%s)\b' % '|'.join(ACTION_MAP.keys())
+
+WORDS = ["room"] + LOCATIONS + ITEM_MAP.keys()
 
 PRIORITY = 1
 
 MQTTHOST = "pixie"
 TOPIC_ROOT = "ha/"
-DEFAULT_LOC = "bedroom-mark"
+DEFAULT_LOC = LOCATIONS[0]
 
 
 def handle(text, mic, profile):
@@ -38,6 +126,8 @@ def handle(text, mic, profile):
     logger = logging.getLogger(__name__)
     logger.debug("mqtt: got text=" + text)
 
+    lower_text = text.lower()
+
     location = DEFAULT_LOC
 
     for l in LOCATIONS:
@@ -47,28 +137,40 @@ def handle(text, mic, profile):
     if location == "bedroom":
         location = "bedroom-mark"
 
-    if "PLAY" in text or "PAUSE" in text:
-        logger.debug("mqtt: publishing to media/playpause")
-        publish.single(TOPIC_ROOT + location + "/media/playpause", "ON",
-                        hostname=MQTTHOST, client_id=DEFAULT_LOC)
-        mic.say(location + " media play pause")
+    item = None
+    topic = None
+    states = None
+    new_state = "ON"
 
-    if "STOP" in text:
-        logger.debug("mqtt: publishing to media/stop")
-        publish.single(TOPIC_ROOT + location + "/media/stop", "ON",
-                        hostname=MQTTHOST, client_id=DEFAULT_LOC)
-        mic.say(location + " media stop")
+    # Attempt to match items first
+    #  e.g. "music volume 50"
+    item_match = re.search(ITEMS_REGEX, lower_text, re.IGNORECASE)
 
-    if re.search(r'\bstatus\b', text, re.IGNORECASE):
-        logger.debug("mqtt: publishing status")
-        publish.single(TOPIC_ROOT + location + "/media/playpause",
-                        "status", hostname=MQTTHOST,
-                        client_id=DEFAULT_LOC)
-        client = mqtt.Client(client_id=DEFAULT_LOC)
-        client.on_connect = on_connect
-        client.on_message = on_message
-        client.connect(MQTTHOST, 1883)
-        client.loop_forever()
+    if item_match:
+        item = ITEM_MAP[item_match.group(0)]
+        topic = item['topic']
+        states = item['states']
+
+    # If we need further info try to extract an action
+    #  e.g. "volume 50", "media OFF"
+    if not item or item['need-action']:
+        action_match = re.search(ACTIONS_REGEX, lower_text, re.IGNORECASE)
+        if action_match:
+            action = ACTION_MAP[action_match.group(0)]
+            # override the item topic and states
+            topic = action['topic']
+            states = action['states']
+
+    if states:
+        state_match = re.search(states, lower_text, re.IGNORECASE)
+        if state_match:
+            new_state = state_match.group(0)
+
+    if topic and new_state:
+        logger.debug("mqtt: publishing to " + location + topic)
+        publish.single(TOPIC_ROOT + location + topic, new_state.upper(),
+                       hostname=MQTTHOST, client_id=DEFAULT_LOC)
+        mic.say(location + topic.replace('/', ' ') + " " + new_state)
 
 
 def isValid(text):
@@ -78,8 +180,9 @@ def isValid(text):
         Arguments:
         text -- user-input, typically transcribed speech
     """
-    for l in WORDS:
-        if l in text:
+    tl = text.lower()
+    for w in WORDS:
+        if w in tl:
             return True
 
     return False
