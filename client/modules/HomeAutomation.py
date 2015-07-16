@@ -37,7 +37,7 @@ def handle(text, mic, profile):
     logger = logging.getLogger(__name__)
     logger.debug("mqtt: got text=" + text)
 
-    location = ""
+    location = DEFAULT_LOC
 
     for l in WORDS:
         if l in text:
@@ -46,29 +46,28 @@ def handle(text, mic, profile):
     if location == "bedroom":
         location = "bedroom-mark"
 
-    if len(location) > 0:
-        if "PLAY" in text or "PAUSE" in text:
-            logger.debug("mqtt: publishing to media/playpause")
-            publish.single(TOPIC_ROOT + location + "/media/playpause", "ON",
-                           hostname=MQTTHOST, client_id=DEFAULT_LOC)
-            mic.say(location + " media play pause")
+    if "PLAY" in text or "PAUSE" in text:
+        logger.debug("mqtt: publishing to media/playpause")
+        publish.single(TOPIC_ROOT + location + "/media/playpause", "ON",
+                        hostname=MQTTHOST, client_id=DEFAULT_LOC)
+        mic.say(location + " media play pause")
 
-        if "STOP" in text:
-            logger.debug("mqtt: publishing to media/stop")
-            publish.single(TOPIC_ROOT + location + "/media/stop", "ON",
-                           hostname=MQTTHOST, client_id=DEFAULT_LOC)
-            mic.say(location + " media stop")
+    if "STOP" in text:
+        logger.debug("mqtt: publishing to media/stop")
+        publish.single(TOPIC_ROOT + location + "/media/stop", "ON",
+                        hostname=MQTTHOST, client_id=DEFAULT_LOC)
+        mic.say(location + " media stop")
 
-        if re.search(r'\bstatus\b', text, re.IGNORECASE):
-            logger.debug("mqtt: publishing status")
-            publish.single(TOPIC_ROOT + location + "/media/playpause",
-                           "status", hostname=MQTTHOST,
-                           client_id=DEFAULT_LOC)
-            client = mqtt.Client(client_id=DEFAULT_LOC)
-            client.on_connect = on_connect
-            client.on_message = on_message
-            client.connect(MQTTHOST, 1883)
-            client.loop_forever()
+    if re.search(r'\bstatus\b', text, re.IGNORECASE):
+        logger.debug("mqtt: publishing status")
+        publish.single(TOPIC_ROOT + location + "/media/playpause",
+                        "status", hostname=MQTTHOST,
+                        client_id=DEFAULT_LOC)
+        client = mqtt.Client(client_id=DEFAULT_LOC)
+        client.on_connect = on_connect
+        client.on_message = on_message
+        client.connect(MQTTHOST, 1883)
+        client.loop_forever()
 
 
 def isValid(text):
