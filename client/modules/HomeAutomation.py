@@ -13,61 +13,51 @@ INTEGER_STATES = r'\b([0-9]+)\b'
 
 ITEM_MAP = {
     'lights': {
-        'name': 'lights',
         'topic': "/lights",
         'need-action': False,
         'states': BINARY_STATES,
     },
     'dimmers': {
-        'name': 'dimmers',
         'topic': "/dimmers",
         'need-action': False,
         'states': INTEGER_STATES,
     },
     'amplifier': {
-        'name': 'amplifier',
         'topic': "/amp",
         'need-action': False,
         'states': BINARY_STATES,
     },
     'temperature': {  # "set"
-        'name': 'temperature',
         'topic': "/setpoint",
         'need-action': False,
         'states': INTEGER_STATES,
     },
     'thermostat': {  # "set"
-        'name': 'thermostat',
         'topic': "/setpoint",
         'need-action': False,
         'states': INTEGER_STATES,
     },
     'media': {
-        'name': 'media',
         'topic': None,  # absolutely require an action
         'need-action': True,
         'states': None,
     },
     'music': {
-        'name': 'media',
         'topic': None,
         'need-action': True,
         'states': None,
     },
     'volume': {  # also an action
-        'name': 'volume',
         'topic': "/media/volume",
         'need-action': False,
         'states': BINARY_STATES + '|' + INTEGER_STATES,
     },
     'scene': {
-        'name': 'scene',
         'topic': "/scene",
         'need-action': False,
         'states': INTEGER_STATES,
     },
     'mood': {
-        'name': 'mood',
         'topic': "/scene",
         'need-action': False,
         'states': INTEGER_STATES,
