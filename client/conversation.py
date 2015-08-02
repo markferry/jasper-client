@@ -32,7 +32,6 @@ class Conversation(object):
                 threshold, transcribed = self.mic.passiveListen(self.persona)
             except IOError, ioe:
                 self._logger.warning(ioe, self.persona)
-                continue
 
             self._logger.debug("Stopped listening for keyword '%s'",
                                self.persona)
