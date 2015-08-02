@@ -49,7 +49,7 @@ class Mic:
         # TODO: Consolidate variables from the next three functions
         THRESHOLD_MULTIPLIER = 1.8
         RATE = 16000
-        CHUNK = 1024
+        CHUNK = 2048
 
         # number of seconds to allow to establish threshold
         THRESHOLD_TIME = 1
@@ -68,10 +68,13 @@ class Mic:
         lastN = [i for i in range(20)]
 
         # calculate the long run average, and thereby the proper threshold
-        for i in range(0, RATE / CHUNK * THRESHOLD_TIME):
+        for i in range(0, max(1, (RATE * THRESHOLD_TIME) / CHUNK)):
 
-            data = stream.read(CHUNK)
-            frames.append(data)
+            try:
+                data = stream.read(CHUNK)
+                frames.append(data)
+            except IOError:
+                pass
 
             # save this data point as a score
             lastN.pop(0)
@@ -116,10 +119,13 @@ class Mic:
         lastN = [i for i in range(30)]
 
         # calculate the long run average, and thereby the proper threshold
-        for i in range(0, RATE / CHUNK * THRESHOLD_TIME):
+        for i in range(0, max(1, (RATE * THRESHOLD_TIME) / CHUNK)):
 
-            data = stream.read(CHUNK)
-            frames.append(data)
+            try:
+                data = stream.read(CHUNK)
+                frames.append(data)
+            except IOError:
+                pass
 
             # save this data point as a score
             lastN.pop(0)
@@ -138,8 +144,12 @@ class Mic:
         # start passively listening for disturbance above threshold
         for i in range(0, RATE / CHUNK * LISTEN_TIME):
 
-            data = stream.read(CHUNK)
-            frames.append(data)
+            try:
+                data = stream.read(CHUNK)
+                frames.append(data)
+            except IOError:
+                pass
+
             score = self.getScore(data)
 
             if score > THRESHOLD:
@@ -160,8 +170,11 @@ class Mic:
         DELAY_MULTIPLIER = 1
         for i in range(0, RATE / CHUNK * DELAY_MULTIPLIER):
 
-            data = stream.read(CHUNK)
-            frames.append(data)
+            try:
+                data = stream.read(CHUNK)
+                frames.append(data)
+            except IOError:
+                pass
 
         # save the audio data
         stream.stop_stream()
@@ -226,8 +239,12 @@ class Mic:
 
         for i in range(0, RATE / CHUNK * LISTEN_TIME):
 
-            data = stream.read(CHUNK)
-            frames.append(data)
+            try:
+                data = stream.read(CHUNK)
+                frames.append(data)
+            except IOError:
+                pass
+
             score = self.getScore(data)
 
             lastN.pop(0)
