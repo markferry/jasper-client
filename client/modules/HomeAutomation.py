@@ -72,6 +72,16 @@ ACTION_MAP = {
         'topic': "/media/playpause",
         'states': None
     },
+    'next': {
+        'topic': "/media/goto",
+        'states': None
+        'new_state': "next"
+    },
+    'previous': {
+        'topic': "/media/goto",
+        'states': None
+        'new_state': "previous"
+    },
     'pause': {
         'topic': "/media/playpause",
         'states': None
@@ -152,6 +162,8 @@ def handle(text, mic, profile):
                 # override the item topic and states
                 topic = action['topic']
                 states = action['states']
+                if 'new_state' in action.keys():
+                    new_state = action['new_state']
 
         if states:
             state_match = re.search(states, command, re.IGNORECASE)
