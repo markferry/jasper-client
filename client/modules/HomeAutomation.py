@@ -234,6 +234,15 @@ def handle_intent(text_and_tree, mic, profile):
         topic = room + '/' + item
         return (topic, new_state)
 
+    def intent_to_mqtt_scene_change(tree):
+        ents = tree['entities']
+        room = parse_room(tree)
+        item = 'scene'
+        new_state = ents['scene'][0]['value']
+
+        topic = room + '/' + item
+        return (topic, new_state)
+
     if not text_and_tree[1] or not len(text_and_tree[1]) > 0:
         # Extract just text and pass to handle(text)
         return handle(text_and_tree[0], mic, profile)
@@ -252,6 +261,8 @@ def handle_intent(text_and_tree, mic, profile):
         (topic, new_state) = intent_to_mqtt_media(tree)
     elif tree['intent'] == 'thermostat_set':
         (topic, new_state) = intent_to_mqtt_thermostat(tree)
+    elif tree['intent'] == 'scene_change':
+        (topic, new_state) = intent_to_mqtt_scene_change(tree)
 
     if topic and new_state:
         logger.debug("ha: publishing to " + TOPIC_ROOT + topic)
