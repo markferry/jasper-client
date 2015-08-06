@@ -74,12 +74,12 @@ ACTION_MAP = {
     },
     'next': {
         'topic': "/media/goto",
-        'states': None
+        'states': None,
         'new_state': "next"
     },
     'previous': {
         'topic': "/media/goto",
-        'states': None
+        'states': None,
         'new_state': "previous"
     },
     'pause': {
