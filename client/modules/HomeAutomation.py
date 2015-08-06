@@ -199,7 +199,10 @@ def handle_intent(text_and_tree, mic, profile):
     def intent_to_mqtt_lights(tree):
         ents = tree['entities']
         room = parse_room(tree)
-        item = ents['light_item'][0]['value']
+        if 'light_item' in ents.keys():
+            item = ents['light_item'][0]['value']
+        elif 'light_group' in ents.keys():
+            item = ents['light_group'][0]['value']
 
         if item == 'amplifier':
             item = 'amp'
