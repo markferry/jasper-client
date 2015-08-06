@@ -171,7 +171,7 @@ def handle(text, mic, profile):
                 new_state = state_match.group(0)
 
         if topic and new_state:
-            logger.debug("mqtt: publishing to " + location + topic)
+            logger.debug("ha: publishing to " + TOPIC_ROOT + location + topic)
             publish.single(TOPIC_ROOT + location + topic, new_state.upper(),
                            hostname=MQTTHOST, client_id=DEFAULT_LOC)
             mic.say(location + topic.replace('/', ' ') + " " + new_state)
@@ -184,6 +184,82 @@ def handle(text, mic, profile):
 
     for command in commands:
         handle_command(command)
+
+
+def handle_intent(text_and_tree, mic, profile):
+    def parse_room(tree):
+        room = DEFAULT_LOC
+        if 'room' in tree['entities'].keys():
+            room = tree['entities']['room'][0]['value']
+            if room == 'bedroom':
+                # speaker dependent, can't interpolate
+                room = 'unknown'
+        return room
+
+    def intent_to_mqtt_lights(tree):
+        ents = tree['entities']
+        room = parse_room(tree)
+        item = ents['light_item'][0]['value']
+
+        if item == 'amplifier':
+            item = 'amp'
+
+        new_state = ents['on_off'][0]['value']
+        topic = room + '/' + item
+        return (topic, new_state)
+
+    def intent_to_mqtt_media(tree):
+        ents = tree['entities']
+        room = parse_room(tree)
+        item = 'media' + '/' + ents['media_action'][0]['value']
+        new_state = 'on'
+
+        if ents['media_action'][0]['value'] == 'volume':
+            new_state = ents['volume_percent'][0]['value']
+
+        topic = room + '/' + item
+        return (topic, new_state)
+
+    def intent_to_mqtt_thermostat(tree):
+        ents = tree['entities']
+        room = parse_room(tree)
+        item = 'unknown'
+        if 'temperature' in ents.keys():
+            item = 'setpoint'
+            new_state = ents['temperature'][0]['value']
+
+        topic = room + '/' + item
+        return (topic, new_state)
+
+    if not text_and_tree[1] or not len(text_and_tree[1]) > 0:
+        # Extract just text and pass to handle(text)
+        return handle(text_and_tree[0], mic, profile)
+
+    tree = text_and_tree[1]
+
+    logger = logging.getLogger(__name__)
+    logger.debug("handle_intent: got tree=" + str(tree))
+
+    topic = None
+    new_state = None
+
+    if tree['intent'] == 'lights':
+        (topic, new_state) = intent_to_mqtt_lights(tree)
+    elif tree['intent'] == 'play_media':
+        (topic, new_state) = intent_to_mqtt_media(tree)
+    elif tree['intent'] == 'thermostat_set':
+        (topic, new_state) = intent_to_mqtt_thermostat(tree)
+
+    if topic and new_state:
+        logger.debug("ha: publishing to " + TOPIC_ROOT + topic)
+        # new_state could be int, here so force conversion
+        state = str(new_state)
+        publish.single(TOPIC_ROOT + topic, state.upper(),
+                       hostname=MQTTHOST, client_id=DEFAULT_LOC)
+
+        mic.say(topic.replace('/', ' ') + " " + state)
+    else:
+        mic.say("Oops. I couldn't understand that.")
 
 
 def isValid(text):
