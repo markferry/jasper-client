@@ -112,7 +112,7 @@ DEFAULT_LOC = LOCATIONS[0]
 
 def handle(text, mic, profile):
     """
-        Handle garage events based on user input
+        Handle home automation events based on user input
 
         Arguments:
         text -- user-input, typically transcribed speech
@@ -120,6 +120,13 @@ def handle(text, mic, profile):
         profile -- contains information related to the user (e.g., phone
         number)
     """
+    if hasattr(text, 'tags') and len(text.tags) > 0:
+        _handle_intent(text, mic, profile)
+    else:
+        _handle_text(text, mic, profile)
+
+
+def _handle_text(text, mic, profile):
     def on_connect(client, userdata, flags, rc):
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
@@ -186,7 +193,11 @@ def handle(text, mic, profile):
         handle_command(command)
 
 
-def handle_intent(text_and_tree, mic, profile):
+def _handle_intent(tagged_text, mic, profile):
+    """
+    Parse text with attached named-entity tree
+    """
+
     def parse_room(tree):
         room = DEFAULT_LOC
         if 'room' in tree['entities'].keys():
@@ -243,11 +254,7 @@ def handle_intent(text_and_tree, mic, profile):
         topic = room + '/' + item
         return (topic, new_state)
 
-    if not text_and_tree[1] or not len(text_and_tree[1]) > 0:
-        # Extract just text and pass to handle(text)
-        return handle(text_and_tree[0], mic, profile)
-
-    tree = text_and_tree[1]
+    tree = tagged_text.tags
 
     logger = logging.getLogger(__name__)
     logger.debug("handle_intent: got tree=" + str(tree))
