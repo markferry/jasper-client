@@ -139,3 +139,114 @@ def isValid(text):
     if hasattr(text, 'tags') and len(text.tags) > 0:
         return text.tags['intent'] in INTENTS
     return False
+
+##--------------------------------------------------------------##
+import unittest
+import mock
+from client import test_mic, taggedtext
+
+
+class TestTaggedText(unittest.TestCase):
+    DEFAULT_PROFILE = {
+        'prefers_email': False,
+        'location': 'Cape Town',
+        'timezone': 'US/Eastern',
+        'phone_number': '012344321'
+    }
+
+    def setUp(self):
+        self.profile = self.DEFAULT_PROFILE
+        self.send = False
+
+    def run_conversation(self, query, inputs):
+        """Generic method for spoofing conversation.
+
+        Arguments:
+        query -- The initial input to the server.
+        inputs -- Additional input, if conversation is extended.
+
+        Returns:
+        The server's responses, in a list.
+        """
+        self.assertTrue(isValid(query))
+        mic = test_mic.Mic(inputs)
+        handle(query, mic, self.profile)
+        return mic.outputs
+
+    def test_empty(self):
+        query = taggedtext.TaggedText("", {})
+        self.assertFalse(isValid(query))
+
+    def test_intents_fail(self):
+        for intent in INTENTS:
+            query = taggedtext.TaggedText(
+                "", {"intent": intent, "entities": {}})
+            inputs = []
+            outputs = self.run_conversation(query, inputs)
+            self.assertEqual(len(outputs), 1)
+            self.assertEqual([BAD_PARSE_MSG], outputs)
+
+    def test_lights(self):
+        query = taggedtext.TaggedText(
+            "",
+            {'intent': "lights",
+             'entities':
+             {
+                 'light_item': [{'value': "light"}],
+                 'on_off': [{'value': "ON"}]
+             }})
+        with mock.patch.object(publish, 'single') as mocked_publish:
+            inputs = []
+            outputs = self.run_conversation(query, inputs)
+
+        self.assertTrue(mocked_publish.called)
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs, [DEFAULT_LOC + " light ON"])
+
+    def test_media(self):
+        query = taggedtext.TaggedText(
+            "",
+            {'intent': "play_media",
+             'entities':
+             {
+                 'media_action': [{'value': "play"}]
+             }})
+        with mock.patch.object(publish, 'single') as mocked_publish:
+            inputs = []
+            outputs = self.run_conversation(query, inputs)
+
+        self.assertTrue(mocked_publish.called)
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs, [DEFAULT_LOC + " media play on"])
+
+    def test_thermostat(self):
+        query = taggedtext.TaggedText(
+            "",
+            {'intent': "thermostat_set",
+             'entities':
+             {
+                 'temperature': [{'value': "20"}]
+             }})
+        with mock.patch.object(publish, 'single') as mocked_publish:
+            inputs = []
+            outputs = self.run_conversation(query, inputs)
+
+        self.assertTrue(mocked_publish.called)
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs, [DEFAULT_LOC + " setpoint 20"])
+
+    def test_scene_change(self):
+        query = taggedtext.TaggedText(
+            "",
+            {'intent': "scene_change",
+             'entities':
+             {
+                 'scene': [{'value': "0"}]
+             }})
+        with mock.patch.object(publish, 'single') as mocked_publish:
+            inputs = []
+            outputs = self.run_conversation(query, inputs)
+
+        self.assertTrue(mocked_publish.called)
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(outputs, [DEFAULT_LOC + " scene 0"])
