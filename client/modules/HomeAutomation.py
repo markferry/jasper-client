@@ -154,6 +154,73 @@ class TestTaggedText(unittest.TestCase):
         'phone_number': '012344321'
     }
 
+    TEST_MQTT = [
+        {
+            'description': "Test basic lights on",
+            'query': {'intent': "lights", 'entities': {
+                'on_off': [{'value': "ON"}]
+            }},
+            'topic': DEFAULT_LOC + "/lights",
+            'value': "ON"
+        },
+        {
+            'description': "Test dimmers",
+            'query': {'intent': "lights", 'entities': {
+                "light_group": [{"value": "dimmers"}],
+                "dimmer_level": [{"value": 100, "type": "value"}],
+            }},
+            'topic': DEFAULT_LOC + "/dimmers",
+            'value': "100"
+        },
+        {
+            'description': "Test amplifier mapping",
+            'query': {'intent': "lights", 'entities': {
+                'light_item': [{'value': "amplifier"}],
+                'on_off': [{'value': "ON"}]
+            }},
+            'topic': DEFAULT_LOC + "/amp",
+            'value': "ON"
+        },
+        {
+            'description': "Test media play",
+            'query': {'intent': "play_media", 'entities': {
+                'media_action': [{'value': "play"}]}},
+            'topic': DEFAULT_LOC + "/media/play",
+            'value': "ON"
+        },
+        {
+            'description': "Test media volume",
+            'query': {'intent': "play_media", 'entities': {
+                'media_action': [{'value': "volume"}],
+                "volume_percent": [{"value": 80}]}},
+            'topic': DEFAULT_LOC + "/media/volume",
+            'value': "80"
+        },
+        {
+            'description': "Test thermostat setpoint",
+            'query': {'intent': "thermostat_set", 'entities': {
+                'temperature': [{'value': "20"}]}},
+            'topic': DEFAULT_LOC + "/setpoint",
+            'value': "20"
+        },
+        {
+            'description': "Test scene change",
+            'query': {'intent': "scene_change", 'entities': {
+                'scene': [{'value': "0"}]}},
+            'topic': DEFAULT_LOC + "/scene",
+            'value': "0"
+        },
+        {
+            'description': "Test location",
+            'query': {'intent': "lights", 'entities': {
+                'on_off': [{'value': "ON"}],
+                "room": [{"value": "study", "metadata": ""}],
+            }},
+            'topic': "study/lights",
+            'value': "ON"
+        },
+    ]
+
     def setUp(self):
         self.profile = self.DEFAULT_PROFILE
         self.send = False
@@ -186,67 +253,16 @@ class TestTaggedText(unittest.TestCase):
             self.assertEqual(len(outputs), 1)
             self.assertEqual([BAD_PARSE_MSG], outputs)
 
-    def test_lights(self):
-        query = taggedtext.TaggedText(
-            "",
-            {'intent': "lights",
-             'entities':
-             {
-                 'light_item': [{'value': "light"}],
-                 'on_off': [{'value': "ON"}]
-             }})
-        with mock.patch.object(publish, 'single') as mocked_publish:
-            inputs = []
-            outputs = self.run_conversation(query, inputs)
-
-        self.assertTrue(mocked_publish.called)
-        self.assertEqual(len(outputs), 1)
-        self.assertEqual(outputs, [DEFAULT_LOC + " light ON"])
-
-    def test_media(self):
-        query = taggedtext.TaggedText(
-            "",
-            {'intent': "play_media",
-             'entities':
-             {
-                 'media_action': [{'value': "play"}]
-             }})
-        with mock.patch.object(publish, 'single') as mocked_publish:
-            inputs = []
-            outputs = self.run_conversation(query, inputs)
-
-        self.assertTrue(mocked_publish.called)
-        self.assertEqual(len(outputs), 1)
-        self.assertEqual(outputs, [DEFAULT_LOC + " media play on"])
-
-    def test_thermostat(self):
-        query = taggedtext.TaggedText(
-            "",
-            {'intent': "thermostat_set",
-             'entities':
-             {
-                 'temperature': [{'value': "20"}]
-             }})
-        with mock.patch.object(publish, 'single') as mocked_publish:
-            inputs = []
-            outputs = self.run_conversation(query, inputs)
-
-        self.assertTrue(mocked_publish.called)
-        self.assertEqual(len(outputs), 1)
-        self.assertEqual(outputs, [DEFAULT_LOC + " setpoint 20"])
-
-    def test_scene_change(self):
-        query = taggedtext.TaggedText(
-            "",
-            {'intent': "scene_change",
-             'entities':
-             {
-                 'scene': [{'value': "0"}]
-             }})
-        with mock.patch.object(publish, 'single') as mocked_publish:
-            inputs = []
-            outputs = self.run_conversation(query, inputs)
-
-        self.assertTrue(mocked_publish.called)
-        self.assertEqual(len(outputs), 1)
-        self.assertEqual(outputs, [DEFAULT_LOC + " scene 0"])
+    def test_mqtt(self):
+        for t in self.TEST_MQTT:
+            query = taggedtext.TaggedText("", t['query'])
+            with mock.patch.object(publish, 'single') as mocked_publish:
+                inputs = []
+                outputs = self.run_conversation(query, inputs)
+                mocked_publish.assert_called_once_with(
+                    TOPIC_ROOT + t['topic'],
+                    t['value'],
+                    hostname=MQTTHOST,
+                    client_id=DEFAULT_LOC)
+            # Just ensure it says *something*
+            self.assertEqual(len(outputs), 1)
