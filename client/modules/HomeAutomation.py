@@ -50,18 +50,23 @@ def _handle_intent(tagged_text, mic, profile):
         room = parse_room(tree)
         item = None
 
-        if 'light_item' in ents.keys():
-            item = ents['light_item'][0]['value']
-        elif 'light_group' in ents.keys():
+        if 'light_group' in ents.keys():
             item = ents['light_group'][0]['value']
+        elif 'light_item' in ents.keys():
+            item = 'lights/' + ents['light_item'][0]['value']
+            # FIXME: fix lights/amplifier intent mapping
+            if item == 'lights/amplifier':
+                item = 'amp'
+        else:
+            item = 'lights'
 
         if not item:
             return (None, None)
 
-        if item == 'amplifier':
-            item = 'amp'
-
-        new_state = ents['on_off'][0]['value']
+        if 'dimmer_level' in ents.keys():
+            new_state = ents['dimmer_level'][0]['value']
+        else:
+            new_state = ents['on_off'][0]['value']
         topic = room + '/' + item
         return (topic, new_state)
 
