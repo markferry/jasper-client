@@ -2,9 +2,6 @@
 import logging
 import paho.mqtt.publish as publish
 
-LOCATIONS = ["bedroom-mark", "bedroom", "study", "kitchen", "lounge",
-             "library", "hall", "ballroom"]
-
 INTENTS = ['lights', 'play_media', 'thermostat_set', 'scene_change']
 # Required by brain.py
 WORDS = INTENTS
@@ -13,7 +10,7 @@ PRIORITY = 1
 
 MQTTHOST = "pixie"
 TOPIC_ROOT = "ha/"
-DEFAULT_LOC = LOCATIONS[0]
+DEFAULT_LOC = "kitchen"
 BAD_PARSE_MSG = "Oops. I couldn't understand that."
 
 
