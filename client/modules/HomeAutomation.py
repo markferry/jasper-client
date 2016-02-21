@@ -2,7 +2,7 @@
 import logging
 import paho.mqtt.publish as publish
 
-INTENTS = ['lights', 'play_media', 'thermostat_set', 'scene_change']
+INTENTS = ['switches', 'play_media', 'thermostat_set', 'scene_change']
 # Required by brain.py
 WORDS = INTENTS
 
@@ -42,16 +42,16 @@ def _handle_intent(tagged_text, mic, profile):
                 room = 'unknown'
         return room
 
-    def intent_to_mqtt_lights(tree):
+    def intent_to_mqtt_switches(tree):
         ents = tree['entities']
         room = parse_room(tree)
         item = None
 
-        if 'light_group' in ents.keys():
-            item = ents['light_group'][0]['value']
-        elif 'light_item' in ents.keys():
-            item = 'lights/' + ents['light_item'][0]['value']
-            # FIXME: fix lights/amplifier intent mapping
+        if 'switch_group' in ents.keys():
+            item = ents['switch_group'][0]['value']
+        elif 'switch_item' in ents.keys():
+            # FIXME: default to lights/*
+            item = 'lights/' + ents['switch_item'][0]['value']
             if item == 'lights/amplifier':
                 item = 'amp'
         else:
@@ -108,8 +108,8 @@ def _handle_intent(tagged_text, mic, profile):
     new_state = None
 
     try:
-        if tree['intent'] == 'lights':
-            (topic, new_state) = intent_to_mqtt_lights(tree)
+        if tree['intent'] == 'switches':
+            (topic, new_state) = intent_to_mqtt_switches(tree)
         elif tree['intent'] == 'play_media':
             (topic, new_state) = intent_to_mqtt_media(tree)
         elif tree['intent'] == 'thermostat_set':
@@ -159,7 +159,7 @@ class TestTaggedText(unittest.TestCase):
     TEST_MQTT = [
         {
             'description': "Test basic lights on",
-            'query': {'intent': "lights", 'entities': {
+            'query': {'intent': "switches", 'entities': {
                 'on_off': [{'value': "ON"}]
             }},
             'topic': DEFAULT_LOC + "/lights",
@@ -167,8 +167,8 @@ class TestTaggedText(unittest.TestCase):
         },
         {
             'description': "Test dimmers",
-            'query': {'intent': "lights", 'entities': {
-                "light_group": [{"value": "dimmers"}],
+            'query': {'intent': "switches", 'entities': {
+                "switch_group": [{"value": "dimmers"}],
                 "dimmer_level": [{"value": 100, "type": "value"}],
             }},
             'topic': DEFAULT_LOC + "/dimmers",
@@ -176,8 +176,8 @@ class TestTaggedText(unittest.TestCase):
         },
         {
             'description': "Test amplifier mapping",
-            'query': {'intent': "lights", 'entities': {
-                'light_item': [{'value': "amplifier"}],
+            'query': {'intent': "switches", 'entities': {
+                'switch_item': [{'value': "amplifier"}],
                 'on_off': [{'value': "ON"}]
             }},
             'topic': DEFAULT_LOC + "/amp",
@@ -214,7 +214,7 @@ class TestTaggedText(unittest.TestCase):
         },
         {
             'description': "Test location",
-            'query': {'intent': "lights", 'entities': {
+            'query': {'intent': "switches", 'entities': {
                 'on_off': [{'value': "ON"}],
                 "room": [{"value": "study", "metadata": ""}],
             }},
